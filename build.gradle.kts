@@ -27,6 +27,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.webjars.bowergithub.twbs:bootstrap:3.3.7")
     implementation("org.webjars.bowergithub.janl:mustache.js:3.0.1")
+    implementation("org.apache.camel.springboot:camel-servlet-starter:3.13.0")
 }
 
 tasks.withType<KotlinCompile> {

@@ -35,11 +35,11 @@ class SearchController(private val producerTemplate: ProducerTemplate) {
     @RequestMapping("/")
     fun index() = "index"
 
-    @RequestMapping(value = ["/search"])
+    /*@RequestMapping(value = ["/search"])
     @ResponseBody
     fun search(@RequestParam("q") q: String?) {
         producerTemplate.requestBodyAndHeader(DIRECT_ROUTE, "mandalorian", "keywords", q)
-    }
+    }*/
 
 }
 
@@ -49,12 +49,13 @@ class Router(meterRegistry: MeterRegistry) : RouteBuilder() {
     private val perKeywordMessages = TaggedCounter("per-keyword-messages", "keyword", meterRegistry)
 
     override fun configure() {
-        from(DIRECT_ROUTE)
-
-            .toD("twitter-search:\${header.keywords}")
-                .process(KeywordProccesor())
-            .wireTap(LOG_ROUTE)
-            .wireTap(COUNT_ROUTE)
+        from("rest:get:search")
+        .log("Header contains \${header.q}")
+        .process(KeywordProccesor())
+        .log("Header after processing contains \${header.q}")
+        .toD("twitter-search:\${header.q}")
+        .wireTap(LOG_ROUTE)
+        .wireTap(COUNT_ROUTE)
 
         from(LOG_ROUTE)
             .marshal().json(JsonLibrary.Gson)
@@ -63,7 +64,7 @@ class Router(meterRegistry: MeterRegistry) : RouteBuilder() {
         from(COUNT_ROUTE)
             .split(body())
             .process { exchange ->
-                val keyword = exchange.getIn().getHeader("keywords")
+                val keyword = exchange.getIn().getHeader("q")
                 if (keyword is String) {
                     keyword.split(" ").map {
                         perKeywordMessages.increment(it)
@@ -76,7 +77,7 @@ class Router(meterRegistry: MeterRegistry) : RouteBuilder() {
 class KeywordProccesor  : Processor {
     override fun process(exchange: Exchange) {
 
-        val msg = (exchange.getIn().getHeader("keywords") as String)
+        val msg = (exchange.getIn().getHeader("q") as String)
         val tokens = msg.split(" ")
         val resultado = StringBuilder()
 
@@ -93,7 +94,8 @@ class KeywordProccesor  : Processor {
         }
 
         val answer = resultado.toString()
-        exchange.getIn().setHeader("keywords",answer)
+        println(answer)
+        exchange.getIn().setHeader("q",answer)
     }
 
 }
